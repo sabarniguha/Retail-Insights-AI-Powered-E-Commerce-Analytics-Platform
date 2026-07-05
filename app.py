@@ -28,8 +28,8 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from dotenv import load_dotenv
-from groq import Groq
-from mistralai import Mistral
+from groq import groq
+from mistralai import mistral
 
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
