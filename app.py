@@ -20,8 +20,6 @@ import json
 import warnings
 from datetime import datetime, timedelta
 from typing import Optional
-from groq import Groq
-from mistralai import Mistral
 
 import numpy as np
 import pandas as pd
@@ -29,19 +27,28 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-
 from dotenv import load_dotenv
+from groq import Groq
+from mistralai import Mistral
+
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-mistral_client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))
 
 warnings.filterwarnings("ignore")
+
+# Load environment variables FIRST
 load_dotenv()
 
+# Read from .env or Streamlit Secrets
+GROQ_API_KEY = os.getenv("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY", "")
+MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY") or st.secrets.get("MISTRAL_API_KEY", "")
+
+# Initialize clients
+groq_client = Groq(api_key=GROQ_API_KEY)
+mistral_client = Mistral(api_key=MISTRAL_API_KEY)
 try:
     import xgboost as xgb
     XGBOOST_AVAILABLE = True
