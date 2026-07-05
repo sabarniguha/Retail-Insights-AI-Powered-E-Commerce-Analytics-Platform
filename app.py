@@ -20,18 +20,24 @@ import json
 import warnings
 from datetime import datetime, timedelta
 from typing import Optional
+from groq import Groq
+from mistralai import Mistral
 
 import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+
+
 from dotenv import load_dotenv
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+mistral_client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))
 
 warnings.filterwarnings("ignore")
 load_dotenv()
