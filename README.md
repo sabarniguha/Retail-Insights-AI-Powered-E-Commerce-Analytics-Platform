@@ -117,6 +117,10 @@ app.py
 
 ---
 
+The link of the app:- https://retail-insights-ai-powered-e-commerce-analytics-platform-bqhl8.streamlit.app/
+
+
+
 ## 📄 License
 
 MIT License — see `LICENSE`. Copyright © Sabarni.
