@@ -26,11 +26,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
-
 from dotenv import load_dotenv
-from groq import Groq
-from mistralai import Mistral
-
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor
@@ -38,17 +34,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 warnings.filterwarnings("ignore")
-
-# Load environment variables FIRST
 load_dotenv()
 
-# Read from .env or Streamlit Secrets
-GROQ_API_KEY = os.getenv("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY", "")
-MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY") or st.secrets.get("MISTRAL_API_KEY", "")
-
-# Initialize clients
-groq_client = Groq(api_key=GROQ_API_KEY)
-mistral_client = Mistral(api_key=MISTRAL_API_KEY)
 try:
     import xgboost as xgb
     XGBOOST_AVAILABLE = True
@@ -60,6 +47,35 @@ try:
     FPDF_AVAILABLE = True
 except ImportError:
     FPDF_AVAILABLE = False
+
+try:
+    import groq  # noqa: F401 - presence check only; client is created lazily per-call
+    GROQ_PACKAGE_AVAILABLE = True
+except ImportError:
+    GROQ_PACKAGE_AVAILABLE = False
+
+try:
+    import mistralai  # noqa: F401 - presence check only; client is created lazily per-call
+    MISTRAL_PACKAGE_AVAILABLE = True
+except ImportError:
+    MISTRAL_PACKAGE_AVAILABLE = False
+
+
+def get_secret(key: str) -> str:
+    """
+    Safely reads a config value from environment variables or Streamlit secrets.
+
+    Never raises: st.secrets access is wrapped because Streamlit throws if no
+    secrets.toml exists at all (e.g. local .env-only setups), and a missing key
+    should simply mean "not configured", not a crash.
+    """
+    value = os.environ.get(key)
+    if value:
+        return value
+    try:
+        return st.secrets.get(key, "")
+    except Exception:  # noqa: BLE001 - no secrets.toml present, or any other secrets error
+        return ""
 
 
 # =============================================================================
@@ -1241,8 +1257,13 @@ def build_data_context_summary(df: pd.DataFrame) -> str:
 
 
 def call_groq(prompt: str, context: str, model: str) -> str:
-    from groq import Groq
-    api_key = os.environ.get("GROQ_API_KEY")
+    if not GROQ_PACKAGE_AVAILABLE:
+        raise RuntimeError("The 'groq' package is not installed in this environment")
+    try:
+        from groq import Groq
+    except ImportError as e:
+        raise RuntimeError(f"Could not import 'groq': {e}") from e
+    api_key = get_secret("GROQ_API_KEY")
     if not api_key:
         raise RuntimeError("GROQ_API_KEY not set")
     client = Groq(api_key=api_key)
@@ -1263,8 +1284,13 @@ def call_groq(prompt: str, context: str, model: str) -> str:
 
 
 def call_mistral(prompt: str, context: str, model: str) -> str:
-    from mistralai import Mistral
-    api_key = os.environ.get("MISTRAL_API_KEY")
+    if not MISTRAL_PACKAGE_AVAILABLE:
+        raise RuntimeError("The 'mistralai' package is not installed in this environment")
+    try:
+        from mistralai import Mistral
+    except ImportError as e:
+        raise RuntimeError(f"Could not import 'mistralai': {e}") from e
+    api_key = get_secret("MISTRAL_API_KEY")
     if not api_key:
         raise RuntimeError("MISTRAL_API_KEY not set")
     client = Mistral(api_key=api_key)
@@ -1331,19 +1357,35 @@ def page_ai_assistant(df: pd.DataFrame, settings: dict) -> None:
         st.warning("No data available for the selected filters.")
         return
 
-    groq_key = bool(os.environ.get("GROQ_API_KEY"))
-    mistral_key = bool(os.environ.get("MISTRAL_API_KEY"))
+    groq_key = bool(get_secret("GROQ_API_KEY"))
+    mistral_key = bool(get_secret("MISTRAL_API_KEY"))
+    groq_ready = GROQ_PACKAGE_AVAILABLE and groq_key
+    mistral_ready = MISTRAL_PACKAGE_AVAILABLE and mistral_key
 
     status_cols = st.columns(3)
-    status_cols[0].markdown(f"**Groq:** {'🟢 Connected' if groq_key else '⚪ No API key'}")
-    status_cols[1].markdown(f"**Mistral:** {'🟢 Connected' if mistral_key else '⚪ No API key'}")
+    if not GROQ_PACKAGE_AVAILABLE:
+        groq_status = "⚪ Package not installed"
+    elif not groq_key:
+        groq_status = "⚪ No API key"
+    else:
+        groq_status = "🟢 Connected"
+    if not MISTRAL_PACKAGE_AVAILABLE:
+        mistral_status = "⚪ Package not installed"
+    elif not mistral_key:
+        mistral_status = "⚪ No API key"
+    else:
+        mistral_status = "🟢 Connected"
+    status_cols[0].markdown(f"**Groq:** {groq_status}")
+    status_cols[1].markdown(f"**Mistral:** {mistral_status}")
     status_cols[2].markdown(f"**Provider:** {settings['ai_provider']}")
 
-    if not groq_key and not mistral_key:
+    if not groq_ready and not mistral_ready:
         st.info(
-            "No `GROQ_API_KEY` or `MISTRAL_API_KEY` found in the environment. The assistant will still work "
-            "using a built-in rule-based analysis engine grounded in your live data. Add API keys in your "
-            "`.env` file or Streamlit secrets to enable full LLM-powered answers."
+            "No working AI provider is configured (either the `groq`/`mistralai` packages aren't installed, "
+            "or `GROQ_API_KEY`/`MISTRAL_API_KEY` aren't set). The assistant will still work "
+            "using a built-in rule-based analysis engine grounded in your live data. Add API keys via your "
+            "`.env` file or Streamlit secrets, and ensure both packages are in `requirements.txt`, to enable "
+            "full LLM-powered answers."
         )
 
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
@@ -1372,11 +1414,11 @@ def page_ai_assistant(df: pd.DataFrame, settings: dict) -> None:
         with st.spinner("Analyzing your data..."):
             for provider in provider_order:
                 try:
-                    if provider == "groq" and groq_key:
+                    if provider == "groq" and groq_ready:
                         answer = call_groq(user_prompt, context, settings.get("ai_model", "auto"))
                         used_provider = "Groq"
                         break
-                    if provider == "mistral" and mistral_key:
+                    if provider == "mistral" and mistral_ready:
                         answer = call_mistral(user_prompt, context, settings.get("ai_model", "auto"))
                         used_provider = "Mistral"
                         break
