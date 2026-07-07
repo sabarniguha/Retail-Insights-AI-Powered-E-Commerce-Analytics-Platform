@@ -1570,61 +1570,55 @@ def page_settings(settings: dict) -> dict:
     ai_provider = st.selectbox("AI Provider", ["Auto", "Groq", "Mistral"],
                                 index=["Auto", "Groq", "Mistral"].index(settings["ai_provider"]))
     ai_model = st.text_input(
-    "AI Model (optional override)",
-    value="" if settings.get("ai_model", "") == "auto" else settings.get("ai_model", ""),
-    help="Leave blank to use the recommended model automatically. Examples: llama-3.1-8b-instant (Groq), mistral-large-latest (Mistral)")
-
+        "AI Model (optional override)",
+        value="" if settings.get("ai_model", "") == "auto" else settings.get("ai_model", ""),
+        help="Leave blank to use the recommended model automatically. Examples: llama-3.1-8b-instant (Groq), mistral-large-latest (Mistral)"
+    )
     groq_api_key = st.text_input(
-    "Groq API Key",
-    value=get_secret("GROQ_API_KEY"),
-    type="password"
-)
+        "Groq API Key",
+        value=get_secret("GROQ_API_KEY"),
+        type="password"
+    )
+    mistral_api_key = st.text_input(
+        "Mistral API Key",
+        value=get_secret("MISTRAL_API_KEY"),
+        type="password"
+    )
+    st.caption("API keys are stored only for the current session.")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-   mistral_api_key = st.text_input(
-    "Mistral API Key",
-    value=get_secret("MISTRAL_API_KEY"),
-    type="password"
-)
+    st.markdown('<div class="section-card"><div class="section-title">📉 Forecasting</div>', unsafe_allow_html=True)
+    forecast_horizon = st.slider("Default Forecast Horizon (months)", 1, 12, settings["forecast_horizon"])
+    st.markdown("</div>", unsafe_allow_html=True)
 
-st.caption("API keys are stored only for the current session.")
-st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown('<div class="section-card"><div class="section-title">🌐 Regional Preferences</div>', unsafe_allow_html=True)
+    currency = st.selectbox(
+        "Currency",
+        list(CURRENCY_SYMBOLS.keys()),
+        index=list(CURRENCY_SYMBOLS.keys()).index(settings["currency"])
+    )
+    date_format = st.selectbox(
+        "Date Format",
+        ["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"],
+        index=["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"].index(settings["date_format"])
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown('<div class="section-card"><div class="section-title">📉 Forecasting</div>', unsafe_allow_html=True)
-forecast_horizon = st.slider("Default Forecast Horizon (months)", 1, 12, settings["forecast_horizon"])
-st.markdown("</div>", unsafe_allow_html=True)
+    if st.button("💾 Save Settings", type="primary"):
+        os.environ["GROQ_API_KEY"] = groq_api_key.strip()
+        os.environ["MISTRAL_API_KEY"] = mistral_api_key.strip()
+        st.session_state["settings"] = {
+            "theme": theme,
+            "ai_provider": ai_provider,
+            "ai_model": ai_model,
+            "forecast_horizon": forecast_horizon,
+            "currency": currency,
+            "date_format": date_format,
+        }
+        st.success("Settings and API keys saved for this session.")
+        st.rerun()
 
-st.markdown('<div class="section-card"><div class="section-title">🌐 Regional Preferences</div>', unsafe_allow_html=True)
-currency = st.selectbox(
-    "Currency",
-    list(CURRENCY_SYMBOLS.keys()),
-    index=list(CURRENCY_SYMBOLS.keys()).index(settings["currency"])
-)
-date_format = st.selectbox(
-    "Date Format",
-    ["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"],
-    index=["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"].index(settings["date_format"])
-)
-st.markdown("</div>", unsafe_allow_html=True)
-
-if st.button("💾 Save Settings", type="primary"):
-
-    os.environ["GROQ_API_KEY"] = groq_api_key.strip()
-    os.environ["MISTRAL_API_KEY"] = mistral_api_key.strip()
-
-    st.session_state["settings"] = {
-        "theme": theme,
-        "ai_provider": ai_provider,
-        "ai_model": ai_model,
-        "forecast_horizon": forecast_horizon,
-        "currency": currency,
-        "date_format": date_format,
-    }
-
-    st.success("Settings and API keys saved for this session.")
-    st.rerun()
-
-return settings
-
+    return settings
 
 # =============================================================================
 # MAIN APPLICATION ENTRY POINT
