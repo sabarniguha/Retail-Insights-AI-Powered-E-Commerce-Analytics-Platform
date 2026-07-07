@@ -8,4 +8,4 @@ openpyxl
 python-dotenv
 fpdf2
 groq
-mistralai
+mistralai==1.9.3
