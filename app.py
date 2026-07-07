@@ -1569,8 +1569,11 @@ def page_settings(settings: dict) -> dict:
     st.markdown('<div class="section-card"><div class="section-title">🤖 AI Assistant Configuration</div>', unsafe_allow_html=True)
     ai_provider = st.selectbox("AI Provider", ["Auto", "Groq", "Mistral"],
                                 index=["Auto", "Groq", "Mistral"].index(settings["ai_provider"]))
-    ai_model = st.text_input("AI Model (optional override)", value=settings.get("ai_model", "auto"),
-                              help="e.g. llama-3.1-8b-instant for Groq, mistral-large-latest for Mistral")
+    ai_model = st.text_input(
+    "AI Model (optional override)",
+    value="" if settings.get("ai_model", "") == "auto" else settings.get("ai_model", ""),
+    help="Leave blank to use the recommended model automatically. Examples: llama-3.1-8b-instant (Groq), mistral-large-latest (Mistral)")
+
     st.caption("API keys are read from environment variables `GROQ_API_KEY` and `MISTRAL_API_KEY` (never entered here).")
     st.markdown("</div>", unsafe_allow_html=True)
 
